@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Переписка с горничной — Текстовый квест</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none; /* легкий эффект "мессенджера", но текст копировать можно */
+        }
+
+        body {
+            background: linear-gradient(145deg, #1a2a3a 0%, #0f1a24 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'SF Pro Text', system-ui, -apple-system, 'Roboto', sans-serif;
+            padding: 16px;
+        }
+
+        /* контейнер телефона */
+        .phone {
+            max-width: 480px;
+            width: 100%;
+            background-color: #f5f7fb;
+            border-radius: 36px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.3), 0 0 0 8px #2c2c2e;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        /* шапка чата */
+        .chat-header {
+            background: #ffffff;
+            padding: 18px 20px 12px 20px;
+            border-bottom: 1px solid #e9edf2;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #b8735f, #9b4b3a);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-info {
+            flex: 1;
+        }
+
+        .name {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: #1e293b;
+        }
+
+        .status {
+            font-size: 0.75rem;
+            color: #22c55e;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status::before {
+            content: "●";
+            font-size: 10px;
+        }
+
+        /* окно сообщений */
+        .messages-area {
+            background: #f1f5f9;
+            height: 520px;
+            overflow-y: auto;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+
+        /* стили баблов */
+        .message {
+            display: flex;
+            max-width: 85%;
+            animation: fadeSlideUp 0.2s ease;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            justify-content: flex-end;
+        }
+
+        .bot-message {
+            align-self: flex-start;
+        }
+
+        .bubble {
+            padding: 10px 14px;
+            border-radius: 22px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+        }
+
+        .user-bubble {
+            background: #2b6e4f;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .bot-bubble {
+            background: white;
+            color: #1e2a3e;
+            border-bottom-left-radius: 5px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .timestamp {
+            font-size: 0.65rem;
+            color: #6c757d;
+            margin-top: 4px;
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+
+        /* индикатор печатает */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: white;
+            border-radius: 20px;
+            width: fit-content;
+            border: 1px solid #e2e8f0;
+        }
+
+        .typing-dot {
+            width: 7px;
+            height: 7px;
+            background: #94a3b8;
+            border-radius: 50%;
+            animation: pulse 1.2s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes pulse {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+            30% { transform: translateY(-5px); opacity: 1; }
+        }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* панель ввода */
+        .input-panel {
+            background: white;
+            padding: 12px 16px 20px;
+            border-top: 1px solid #e9edf2;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .input-panel input {
+            flex: 1;
+            border: 1px solid #cbd5e1;
+            border-radius: 28px;
+            padding: 12px 18px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.2s;
+            font-family: inherit;
+            background: #ffffff;
+        }
+
+        .input-panel input:focus {
+            border-color: #2b6e4f;
+            box-shadow: 0 0 0 3px rgba(43,110,79,0.2);
+        }
+
+        .input-panel button {
+            background: #2b6e4f;
+            border: none;
+            color: white;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 1.4rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .input-panel button:hover {
+            background: #1e5940;
+            transform: scale(0.96);
+        }
+
+        .reset-btn {
+            background: #475569 !important;
+            font-size: 1rem !important;
+            width: auto !important;
+            border-radius: 40px !important;
+            padding: 0 16px !important;
+            gap: 6px;
+        }
+
+        .reset-btn:hover {
+            background: #334155 !important;
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .helper-text {
+            font-size: 0.7rem;
+            text-align: center;
+            padding: 6px;
+            background: #eef2ff;
+            color: #334155;
+            border-top: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+<div class="phone">
+    <div class="chat-header">
+        <div class="avatar">👩‍🦱</div>
+        <div class="header-info">
+            <div class="name">Анна — Горничная</div>
+            <div class="status">онлайн</div>
+        </div>
+    </div>
+
+    <div class="messages-area" id="messagesContainer">
+        <!-- динамические сообщения -->
+        <div class="message bot-message">
+            <div class="bubble bot-bubble">
+                Добрый вечер! Я Анна, горничная поместья. Чем могу помочь? Вы, кажется, недавно заселились?
+            </div>
+        </div>
+        <div class="timestamp" style="text-align: center;">сегодня, 19:42</div>
+    </div>
+
+    <div class="input-panel">
+        <input type="text" id="messageInput" placeholder="Написать сообщение..." autocomplete="off">
+        <div class="flex-row">
+            <button id="sendBtn">➤</button>
+            <button id="resetBtn" class="reset-btn">⟳</button>
+        </div>
+    </div>
+    <div class="helper-text">
+        💬 Ветвящийся диалог: ваши ответы меняют историю
+    </div>
+</div>
+
+<script>
+    // ---------- СЦЕНАРИЙ: ИГРА "ПЕРЕПИСКА С ГОРНИЧНОЙ" (детектив / драма) ----------
+    // Состояния: ключ — текущий тег, куда мы переходим после ответа игрока
+    // Структура: текст сообщения горничной, варианты ответов, переходы, а также возможные концовки
+
+    const STORY = {
+        // Старт: Приветствие
+        start: {
+            botMsg: "Добрый вечер! Я Анна, горничная поместья. Чем могу помочь? Вы, кажется, недавно заселились?",
+            options: [
+                { text: "Да, я в комнате 12. Хотел бы узнать про завтрак.", next: "breakfast" },
+                { text: "Скажите, а в этом доме не странно? Какие-то шаги ночью...", next: "noise" },
+                { text: "Ничего не нужно, просто знакомлюсь. Расскажите о себе.", next: "aboutAnna" }
+            ]
+        },
+        breakfast: {
+            botMsg: "Завтрак подают с 8 до 10 в малой столовой. Шеф-повар готовит омлет с трюфелем или традиционную английскую кашу. Что предпочтёте?",
+            options: [
+                { text: "Омлет с трюфелем, пожалуйста.", next: "truffleEnd" },
+                { text: "Английскую кашу. И кофе.", next: "porridgeEnd" },
+                { text: "Вообще, я больше хочу поговорить о странных звуках.", next: "noise" }
+            ]
+        },
+        noise: {
+            botMsg: "Вы заметили?.. (тише) Я думала, мне показалось. По ночам кто-то ходит по коридору третьего этажа. Но ключи есть только у хозяина и у меня. Я бы посоветовала быть осторожнее. Может, поднимемся вместе сегодня ночью?",
+            options: [
+                { text: "Да, давайте проверим! Я возьму фонарик.", next: "investigateTogether" },
+                { text: "Звучит опасно. Вызвать полицию?", next: "callPolice" },
+                { text: "Думаете, это призрак старого лорда?", next: "ghostRoute" }
+            ]
+        },
+        aboutAnna: {
+            botMsg: "Я работаю здесь третий год. Поместье большое, но хозяин редко бывает. А вы первый раз в наших краях? Честно говоря, здесь немного одиноко...",
+            options: [
+                { text: "Почему одиноко? У вас же есть другие слуги?", next: "lonelyDetails" },
+                { text: "Может, как-нибудь выпьем чай вместе?", next: "teaOffer" },
+                { text: "Я слышал странные звуки ночью. Это из-за них?", next: "noise" }
+            ]
+        },
+        lonelyDetails: {
+            botMsg: "Раньше был дворецкий, но он уволился. Говорил, что 'дом не отпускает'. А ещё садовник... Исчез месяц назад. Полиция не нашла ничего. Я боюсь, но работа нужна.",
+            options: [
+                { text: "Это ужасно. Давайте вместе поищем улики?", next: "investigateTogether" },
+                { text: "Может, вам стоит уехать отсюда?", next: "leaveAdvice" }
+            ]
+        },
+        teaOffer: {
+            botMsg: "Вы милы, но это неуместно... Однако, если вы серьёзно, то вечером после смены я свободна. Только не в служебных помещениях — есть каминный зал. Что скажете?",
+            options: [
+                { text: "Договорились. В 21:00 у камина.", next: "teaDateGood" },
+                { text: "Простите, я погорячился. Лучше просто расскажите о тайнах поместья.", next: "secretsMansion" }
+            ]
+        },
+        teaDateGood: {
+            botMsg: "✨ Вы пришли, мы пили чай с малиновым пирогом. Анна призналась, что ей страшно, но с вами она чувствует себя спокойно. Вы стали близки. (Хорошая концовка: дружба/романтика, тайны остались, но вы не одни) ✨",
+            options: [
+                { text: "Начать заново", next: "restart" }
+            ],
+            isEnding: true
+        },
+        secretsMansion: {
+            botMsg: "Говорят, в восточном крыле спрятано старинное зеркало, через которое... Впрочем, не будем о грустном. Если захотите приключений, загляните в библиотеку после полуночи.",
+            options: [
+                { text: "Спасибо за совет, может, схожу.", next: "libraryEnd" },
+                { text: "Вернёмся к шагам ночью?", next: "noise" }
+            ]
+        },
+        libraryEnd: {
+            botMsg: "📖 Вы нашли тайную комнату, а там — дневник бывшего владельца. Оказалось, все странности из-за старой системы отопления и сквозняков. А исчезнувшие слуги просто уволились, не предупредив. Анна вздохнула с облегчением, и вы стали хорошими друзьями. Спокойная концовка.",
+            options: [
+                { text: "Начать сначала", next: "restart" }
+            ],
+            isEnding: true
+        },
+        truffleEnd: {
+            botMsg: "Наутро вам принесли великолепный омлет. Анна улыбнулась, пожелав приятного аппетита. Вы насладились завтраком, и поместье больше не казалось мрачным. (Уютная концовка: сыто и спокойно)",
+            options: [
+                { text: "Новая игра", next: "restart" }
+            ],
+            isEnding: true
+        },
+        porridgeEnd: {
+            botMsg: "Английская каша оказалась неожиданно вкусной, с мёдом и ягодами. Анна подсела поболтать о путешествиях. Вы провели приятное утро. (Добрая концовка: завтрак сблизил)",
+            options: [
+                { text: "Сыграть снова", next: "restart" }
+            ],
+            isEnding: true
+        },
+        investigateTogether: {
+            botMsg: "В полночь вы встретились в холле. Поднялись на третий этаж, и вдруг услышали шорох из старого чулана. Анна вскрикнула, но это был всего лишь ёжик, который забрёл через дыру в стене. Вы посмеялись, тайна раскрыта! Концовка: забавное приключение.",
+            options: [
+                { text: "Пройти заново", next: "restart" }
+            ],
+            isEnding: true
+        },
+        callPolice: {
+            botMsg: "Полиция приехала, обошла поместье, но ничего подозрительного не нашла. Анну уволили за 'ложные тревоги'. Она уехала расстроенная. Вы чувствуете вину. (Грустная концовка)",
+            options: [
+                { text: "Переиграть", next: "restart" }
+            ],
+            isEnding: true
+        },
+        ghostRoute: {
+            botMsg: "Вы шутите?.. Но если это призрак, я не хочу его тревожить. Лучше запритесь в комнате. Анна испуганно убежала, и больше вы её не видели. Одиночество в поместье. (Мистическое затишье)",
+            options: [
+                { text: "Начать историю заново", next: "restart" }
+            ],
+            isEnding: true
+        },
+        leaveAdvice: {
+            botMsg: "Вы правы... Но я не могу, мне нужно содержать младшую сестру. Остаюсь. Однако спасибо за заботу. Давайте лучше сменим тему. (Возврат к основным вопросам)",
+            options: [
+                { text: "Расскажите о странных звуках", next: "noise" },
+                { text: "Может, чай?", next: "teaOffer" }
+            ]
+        }
+    };
+
+    // Вспомогательный объект для хранения текущей сцены
+    let currentNodeId = "start";
+    let waitingForInput = true;     // ждём ли выбора после сообщения бота
+    let currentOptions = [];        // варианты для текущего состояния
+    let isEnding = false;            // концовка (кнопка ресет или перезапуск через выбор)
+
+    // DOM элементы
+    const messagesContainer = document.getElementById("messagesContainer");
+    const messageInput = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    // Вспомогательные функции
+    function addMessage(text, isUser = false, timestamp = null) {
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${isUser ? "user-message" : "bot-message"}`;
+        const bubbleClass = isUser ? "user-bubble" : "bot-bubble";
+        const bubble = document.createElement("div");
+        bubble.className = `bubble ${bubbleClass}`;
+        bubble.innerText = text;
+        messageDiv.appendChild(bubble);
+        messagesContainer.appendChild(messageDiv);
+        
+        // добавить таймстемп опционально (не для каждого, но для порядка)
+        if (!isUser) {
+            const timeSpan = document.createElement("div");
+            timeSpan.className = "timestamp";
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            timeSpan.innerText = timeStr;
+            timeSpan.style.textAlign = "left";
+            timeSpan.style.marginLeft = "12px";
+            messagesContainer.appendChild(timeSpan);
+        } else {
+            const timeSpan = document.createElement("div");
+            timeSpan.className = "timestamp";
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            timeSpan.innerText = timeStr;
+            timeSpan.style.textAlign = "right";
+            timeSpan.style.marginRight = "12px";
+            messagesContainer.appendChild(timeSpan);
+        }
+        
+        scrollToBottom();
+    }
+
+    function addTypingIndicator() {
+        const typingDiv = document.createElement("div");
+        typingDiv.className = "message bot-message";
+        typingDiv.id = "typingIndicator";
+        const bubbleDiv = document.createElement("div");
+        bubbleDiv.className = "bubble bot-bubble typing-indicator";
+        bubbleDiv.innerHTML = `<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>`;
+        typingDiv.appendChild(bubbleDiv);
+        messagesContainer.appendChild(typingDiv);
+        scrollToBottom();
+    }
+
+    function removeTypingIndicator() {
+        const indicator = document.getElementById("typingIndicator");
+        if (indicator) indicator.remove();
+    }
+
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Отображение вариантов ответа (кнопки/подсказки вводом? Сделаем интерактив: пользователь вводит число? Но удобнее варианты кликабельными панелями.)
+    // Улучшаем UX: динамически создаём панель с кнопками вариантов. Либо предложим ввод по цифрам. Сделаем красивые кнопки под полем ввода.
+    // Для удобства — показываем варианты в отдельном блоке прямо над полем ввода, чтобы не печатать ответ.
+    let optionsPanel = null;
+    
+    function createOptionsPanel(options) {
+        // удалить старую панель если есть
+        if (optionsPanel) optionsPanel.remove();
+        const panel = document.createElement("div");
+        panel.style.display = "flex";
+        panel.style.flexWrap = "wrap";
+        panel.style.gap = "8px";
+        panel.style.padding = "8px 16px 8px 16px";
+        panel.style.background = "#ffffffd9";
+        panel.style.borderTop = "1px solid #e2e8f0";
+        panel.style.marginTop = "4px";
+        panel.style.backdropFilter = "blur(4px)";
+        panel.id = "quickOptionsPanel";
+        
+        options.forEach((opt, idx) => {
+            const btn = document.createElement("button");
+            btn.innerText = opt.text;
+            btn.style.background = "#f1f5f9";
+            btn.style.border = "1px solid #cbd5e1";
+            btn.style.borderRadius = "30px";
+            btn.style.padding = "8px 16px";
+            btn.style.fontSize = "0.8rem";
+            btn.style.cursor = "pointer";
+            btn.style.transition = "0.1s";
+            btn.style.fontFamily = "inherit";
+            btn.style.color = "#1e293b";
+            btn.addEventListener("click", () => {
+                if (!waitingForInput) return;
+                // пользователь выбрал вариант
+                addMessage(opt.text, true);
+                waitingForInput = false;
+                // переходим к следующему узлу
+                const nextNode = opt.next;
+                if (nextNode === "restart") {
+                    resetGame();
+                } else {
+                    // показать печать и ответ бота
+                    proceedToNode(nextNode);
+                }
+                // скрыть панель вариантов
+                if (optionsPanel) optionsPanel.remove();
+                optionsPanel = null;
+            });
+            panel.appendChild(btn);
+        });
+        
+        const inputPanel = document.querySelector(".input-panel");
+        inputPanel.insertAdjacentElement("beforebegin", panel);
+        optionsPanel = panel;
+        scrollToBottom();
+    }
+    
+    function proceedToNode(nodeId) {
+        if (nodeId === "restart") {
+            resetGame();
+            return;
+        }
+        const node = STORY[nodeId];
+        if (!node) {
+            // fallback
+            addMessage("Анна задумалась и ушла... что-то пошло не так. Начните заново.", false);
+            waitingForInput = false;
+            return;
+        }
+        
+        // имитируем набор сообщения горничной
+        addTypingIndicator();
+        setTimeout(() => {
+            removeTypingIndicator();
+            addMessage(node.botMsg, false);
+            currentNodeId = nodeId;
+            
+            if (node.isEnding) {
+                // финал: варианты только "начать заново" внутри опций, но мы их покажем
+                if (node.options && node.options.length > 0) {
+                    currentOptions = node.options;
+                    waitingForInput = true;
+                    createOptionsPanel(currentOptions);
+                } else {
+                    waitingForInput = false;
+                    // если нет кнопок, даем автоматический сброс? но для финала выведем кнопку сброса
+                    const resetOption = [{ text: "🔄 Начать новую игру", next: "restart" }];
+                    createOptionsPanel(resetOption);
+                    waitingForInput = true;
+                }
+                isEnding = true;
+            } else {
+                // обычный диалог
+                if (node.options && node.options.length > 0) {
+                    currentOptions = node.options;
+                    waitingForInput = true;
+                    createOptionsPanel(currentOptions);
+                } else {
+                    // такого не должно быть, но если нет вариантов — сброс
+                    waitingForInput = false;
+                }
+                isEnding = false;
+            }
+        }, 800);
+    }
+    
+    // Обработчик отправки текста (пользователь может писать свои варианты, но для упрощения мы реализуем интеллектуальное распознавание?)
+    // Поскольку игра основана на выборе, а в оригинале "Переписка" иногда вводят фразы, но у нас есть кнопки.
+    // Чтобы не ломать логику, если пользователь что-то пишет, предложим помощь: либо игнорируем, либо направляем на рестарт. Лучше показать подсказку.
+    function handleUserTextInput() {
+        if (!waitingForInput) {
+            addMessage(messageInput.value, true);
+            addMessage("Сейчас история завершена или ожидает выбора. Нажмите на одну из кнопок с вариантами или сбросьте игру.", false);
+            messageInput.value = "";
+            return;
+        }
+        const rawText = messageInput.value.trim();
+        if (rawText === "") return;
+        
+        // добавим сообщение пользователя
+        addMessage(rawText, true);
+        messageInput.value = "";
+        
+        // поиск совпадений среди текущих опций (упрощённо: по точному или частичному совпадению)
+        if (currentOptions.length === 0) {
+            addMessage("Анна: Не понимаю, о чём вы. Пожалуйста, выберите один из вариантов на кнопках.", false);
+            waitingForInput = true;
+            if (optionsPanel) createOptionsPanel(currentOptions); // перерисовать
+            return;
+        }
+        
+        let matchedOption = null;
+        const lowerInput = rawText.toLowerCase();
+        for (let opt of currentOptions) {
+            if (opt.text.toLowerCase() === lowerInput || 
+                (lowerInput.includes(opt.text.toLowerCase().slice(0, 12)) && opt.text.length > 5)) {
+                matchedOption = opt;
+                break;
+            }
+        }
+        // если нет совпадения — предложить выбрать из кнопок
+        if (!matchedOption) {
+            addMessage("Анна: Пожалуйста, выберите один из предложенных вариантов (кнопки под сообщениями).", false);
+            if (optionsPanel) createOptionsPanel(currentOptions);
+            return;
+        }
+        
+        waitingForInput = false;
+        if (optionsPanel) optionsPanel.remove();
+        optionsPanel = null;
+        
+        if (matchedOption.next === "restart") {
+            resetGame();
+        } else {
+            proceedToNode(matchedOption.next);
+        }
+    }
+    
+    function resetGame() {
+        // полная очистка переписки
+        messagesContainer.innerHTML = "";
+        if (optionsPanel) optionsPanel.remove();
+        optionsPanel = null;
+        currentNodeId = "start";
+        waitingForInput = true;
+        isEnding = false;
+        
+        // стартовое сообщение
+        const startNode = STORY.start;
+        addMessage(startNode.botMsg, false);
+        const timeSpan = document.createElement("div");
+        timeSpan.className = "timestamp";
+        const now = new Date();
+        timeSpan.innerText = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+        timeSpan.style.textAlign = "left";
+        timeSpan.style.marginLeft = "12px";
+        messagesContainer.appendChild(timeSpan);
+        
+        currentOptions = startNode.options;
+        createOptionsPanel(currentOptions);
+        scrollToBottom();
+    }
+    
+    // инициализация
+    function init() {
+        resetGame(); // старт с приветствием
+        sendBtn.addEventListener("click", () => {
+            if (messageInput.value.trim() !== "") handleUserTextInput();
+        });
+        messageInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                if (messageInput.value.trim() !== "") handleUserTextInput();
+            }
+        });
+        resetBtn.addEventListener("click", () => {
+            resetGame();
+        });
+    }
+    
+    init();
+</script>
+</body>
+</html>
